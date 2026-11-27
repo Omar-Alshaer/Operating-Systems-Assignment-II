@@ -1,0 +1,133 @@
+Operating-Systems-Assignment-II
+Basic forks and C Style Development
+
+Name: Omar Reda Elshaer ID: 24100592
+
+=====================================================
+1. The code examples from Lab 5 and what each one does
+=====================================================
+
+--- Example 1: process_creation.c (Exercise 1 - Using fork() in C) ---
+
+This program shows how a new process is created in Linux using the
+fork() system call.
+
+What it does, line by line:
+- fork() creates an exact copy of the current process. The copy is
+  called the child, and the original is the parent.
+- fork() returns a different value in each process:
+    * In the child process it returns 0.
+    * In the parent process it returns the PID of the child (a
+      positive number).
+    * If something went wrong it returns a negative number.
+- So after the fork, the two processes are running the same code,
+  and we use the return value to tell them apart with an if/else.
+- In this program the child prints its own PID using getpid(), the
+  parent prints its own PID, and if fork failed we print an error
+  message.
+
+When you run it you see two lines, one from the parent and one from
+the child. Their order is not guaranteed, because the operating
+system decides which one runs first.
+
+--- Example 2: file1.c and file2.c (Exercise 5 - Role of the Linker) ---
+
+This example is split over two separate .c files on purpose, to show
+how the linker works.
+
+- file1.c defines a function called hello() that prints
+  "Hello from file1!".
+- file2.c contains main(). main() calls hello(), but hello() is not
+  defined inside file2.c. We only declare it at the top with
+  "void hello();" so the compiler knows it exists somewhere else.
+- When we compile them together with:
+      gcc file1.c file2.c -o output_program
+  the linker connects the call to hello() in file2.c with the actual
+  definition of hello() in file1.c, and produces one executable.
+- If we change hello() in file1.c (for example change the text it
+  prints) and recompile, we don't need to change file2.c at all. The
+  linker connects them again and the new message shows up. This is
+  why big projects can be split into many files.
+
+--- Example 3: simple_program.c (Exercise 6 - Role of the Loader) ---
+
+A very small program that just prints one line. The point of this
+example is not the code itself, but what happens when we run it.
+
+- We compile it with:  gcc simple_program.c -o simple_program
+- Then we run:  ldd simple_program
+- ldd lists the shared libraries the program needs. Even this tiny
+  program depends on libc (the C standard library, where printf
+  actually lives), and on ld-linux, which is the dynamic loader
+  itself.
+- This shows that printf is not compiled into our program. It is
+  loaded from a shared library at run time by the loader.
+
+Note: Exercises 2, 3 and 4 in Lab 5 were shell practice, not C code:
+starting a process in the background with "sleep 300 &", listing
+background jobs with "jobs", finding a PID with "ps aux | grep
+sleep", killing it with "kill <PID>", and pausing/resuming a process
+with "kill -STOP <PID>" and "kill -CONT <PID>".
+
+=====================================================
+2. What is the job of the Linker?
+=====================================================
+
+The linker is the tool that combines one or more object files (.o)
+into a single executable program.
+
+When we compile a C file, the compiler only translates that one file
+into machine code (an object file). If the file calls a function
+that is defined in another file, the compiler leaves that call
+"open" and marks it as something to be resolved later.
+
+The linker's job is to:
+- Take all the object files and libraries.
+- Match every function call or variable reference with its real
+  definition (this is called symbol resolution).
+- Fix the addresses so the calls jump to the right place.
+- Produce the final executable file.
+
+In Example 2 above, gcc runs the linker for us after compiling, and
+that is how the call to hello() in file2.c gets connected to the
+hello() written in file1.c. The linker also links library functions
+like printf from the C library.
+
+=====================================================
+3. What is the job of the Loader?
+=====================================================
+
+The loader is the part of the operating system that takes an
+executable file from disk and gets it running in memory.
+
+Its job is to:
+- Read the executable file and copy its code and data into memory.
+- Load the shared libraries the program depends on (the ones we saw
+  with ldd, like libc).
+- Do the final address fixing for those shared libraries.
+- Set up the stack and everything the process needs.
+- Jump to the program's entry point so it actually starts running.
+
+So in short: the linker works at build time to produce the
+executable, and the loader works at run time to bring that
+executable into memory and start it.
+
+=====================================================
+4. What the Makefile does
+=====================================================
+
+The Makefile automates compiling, so we don't have to type the gcc
+commands by hand every time.
+
+- "make" or "make all" builds all three programs:
+    * process_creation from process_creation.c
+    * output_program from file1.c and file2.c (linked together)
+    * simple_program from simple_program.c
+- Each target also lists the files it depends on, so make only
+  rebuilds a program when its source files actually changed.
+- "make run" builds everything and then runs all three programs one
+  after the other.
+- "make clean" deletes the compiled executables so we can rebuild
+  from scratch.
+- GCC and GCFLAGS are variables at the top, so if we want to change
+  the compiler or add flags we change them in one place.
